@@ -1,0 +1,761 @@
+---
+title: "Graphiques article Maud Megret"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document: default
+date: "2026-03-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Fonctions
+
+```{r}
+detect_records_maxima_norm<-function(X){
+  l=length(X)
+  rec_max=c(X[1])
+  ind_max<-c(1)
+  
+  for(i in 2:(l-1)){
+    #print(i)
+    if(X[i-1]<=X[i] && X[i]>X[i+1]){
+      l<-length(rec_max)
+      if(X[i]> rec_max[l]){
+        rec_max<-c(rec_max,X[i])
+        ind_max<-c(ind_max,i)
+      }
+    }
+  }
+  df<-data.frame(rec_max,ind_max)
+  return(df)
+}
+
+detect_records<-function(X){
+  l=length(X)
+  rec_max=c(X[1])
+  ind_max<-c(1)
+  
+  for(i in 2:(l-1)){
+    #print(i)
+    l2<-length(rec_max)
+    if(X[i]> rec_max[l2]){
+      rec_max<-c(rec_max,X[i])
+      ind_max<-c(ind_max,i)
+    }
+  }
+  df<-data.frame(rec_max,ind_max)
+  return(df)
+}
+
+
+```
+
+# Librairies
+```{r}
+#install.packages('/home/mmegret/records(1)/records/v0.1.2/simrec_0.1.2.tar.gz',repos = NULL, type="source")
+```
+
+```{r, results='hide'}
+library(simrec)
+library(scales)
+library(openxlsx)
+```
+
+# 1 - Figure 1
+
+Influence of the reference set 𝑆𝑡 choice in record definition (1) from a simulated time series. The orange dots corresponds to records defined with $S_t = \{0, 1, … , 𝑡 − 1\}$, while the blue circles occur when $S_𝑡 = \{0, 1, … , 𝑡 − 1, 𝑡 + 1\}$.
+
+### a) Données
+
+```{r}
+pos<-c(0,2.3,3.6,3.3,1.8,3,2.7,3.6,3.7,4.6,3.9,3.85,3.75,2.8,2.2,2.25,3,2,2.5,1.7,2.45,2.5,1.6,1.65,1.55,2,2.45,3.1,2.8,3.2,3.8,3.1,5.3,5.45,7.6,9.8,9.4,10.2,10,9.4,7.8,4.5,4.6,5.5,5.4,3.8,3.7,3.5,2.5,1.2,0)
+times<-c(0:50)
+```
+
+### b) Detection des records et des points à surligner
+
+```{r}
+rec_max_bg2<-detect_records_maxima_norm(pos)[-1,]
+rec_bg2<-detect_records(pos)
+
+a<-times[rec_max_bg2$ind_max][2]
+b<-rec_max_bg2$rec_max[2]
+c<-times[rec_max_bg2$ind_max][3]
+d<-rec_max_bg2$rec_max[3]
+e<-times[rec_max_bg2$ind_max][1]
+f<-rec_max_bg2$rec_max[1]
+g<-times[rec_max_bg2$ind_max][4]
+h<-rec_max_bg2$rec_max[4]
+
+```
+
+### c) Figure 1
+
+```{r}
+plot(times,pos,type='b',pch=19,cex=0.5,lwd=2,xlab='Time',ylab='Xt')
+points(times[rec_max_bg2$ind_max],rec_max_bg2$rec_max,pch=1,cex=3,col='blue')
+segments(x0 = a, y0 = -1, x1 = a, y1 = b,lty=2,col='blue')
+segments(x0 = c, y0 = -1, x1 = c, y1 = d,lty=2,col='blue')
+segments(x0 = e, y0 = -1, x1 = e, y1 = f,lty=2,col='blue')
+segments(x0 = g, y0 = -1, x1 = g, y1 = h,lty=2,col='blue')
+points(times[rec_bg2$ind_max],rec_bg2$rec_max,pch=19,cex=2,col='orange')
+
+```
+
+### d) Figure 1 centrée entre le 1er et le dernier record bleu ($𝑆_𝑡 = \{0, 1, … , 𝑡 − 1, 𝑡 + 1\}$)
+
+```{r}
+plot(times[3:38],pos[3:38],type='b',pch=19,cex=0.5,lwd=2,xlab='Time',ylab='Xt')
+points(times[rec_max_bg2$ind_max],rec_max_bg2$rec_max,pch=1,cex=3,col='blue')
+segments(x0 = a, y0 = -1, x1 = a, y1 = b,lty=2,col='blue')
+segments(x0 = c, y0 = -1, x1 = c, y1 = d,lty=2,col='blue')
+segments(x0 = e, y0 = -1, x1 = e, y1 = f,lty=2,col='blue')
+segments(x0 = g, y0 = -1, x1 = g, y1 = h,lty=2,col='blue')
+points(times[rec_bg2$ind_max][-2],rec_bg2$rec_max[-2],pch=19,cex=2,col='orange')
+
+
+```
+
+# 2 - Données du Glacier des Bossons
+
+Transformation of the observed \textit{Glacier des Bossons} trajectory from 1818 to 1999 to fit the record theory framework. Source: \cite{nussbaumer2012little}. The blue dots are the observed moraines, and the black line is the real observed trajectory of the frontal position of the \textit{Glacier des Bossons}. Both are measured along a longitudial axis corresponding to the glacier flow direction. Subfigure a) : the x-axis represents the years and the y-axis the frontal position relative to the first moraine position that corresponds to the glacier maximal extent during the Littel Ice Age. Subfigure b) : the x-axis represents the number of years between 1999 and the year plotted and the y-axis position relative to the 1999 glacier frontal position.
+
+### a) Importation des données
+
+```{r}
+bossons <- read.xlsx("/home/mmegret/Documents/thèse Maud MEGRET/données/bossons2Phil.xlsx",sep=';')
+bossons_0_NA<-bossons[-which(bossons$`Position;front;(mean)`==NaN),]
+year<-bossons_0_NA$Year
+year_NA<-bossons$Year
+pos_inv_NA<-rev(bossons$`Position;front;(mean)`)
+X_NA<-as.numeric(pos_inv_NA)+1330
+X_0<-X_NA
+X_0[which(is.na(X_0))]<-0
+pos_NA<--as.numeric((bossons$`Position;front;(mean)`))
+```
+
+### b) Détection des moraines
+
+```{r}
+l_1_0<-(detect_records_maxima_norm(X_0)$ind_max[-1])[1]
+l_ind_0<-detect_records_maxima_norm(X_0)$ind_max[-1]
+recordTimes_0=l_ind_0
+recordValues_0=(detect_records_maxima_norm(X_0)$rec_max[-1])
+dMor_0=cbind(recordTimes_0,recordValues_0)
+dMor_0<-dMor_0[-4,]
+dMor_0<-dMor_0[-c(6,7,9),]
+mor1_0=dMor_0[1,1]
+morf_0=dMor_0[length(dMor_0[,1]),1]
+w_1818<-which(year_NA>=1818)
+w_18_99<-which((year_NA[w_1818])<=1999)
+```
+
+### c) Graphiques miroirs
+
+```{r}
+par(mfrow=c(1,2))
+plot((year_NA[w_1818])[w_18_99],-(pos_NA[w_1818])[w_18_99],type='p',xlab='Time (year)',ylab='Cumulative length change (m)',lwd=2,pch=4,cex=0.5)
+lines((year_NA[w_1818])[w_18_99],-(pos_NA[w_1818])[w_18_99])
+points(2011-dMor_0[,1],dMor_0[,2]-1330,pch=19,cex=2,col='blue')
+
+plot((mor1_0:morf_0)-12,X_NA[mor1_0:morf_0],type='p',pch=4,cex=0.5,xlab='Time (year)',ylab='Position (m)',lwd=2)
+lines((mor1_0:morf_0)-12,X_NA[mor1_0:morf_0])
+points(dMor_0[,1]-12,dMor_0[,2],pch=19,cex=2,col='blue')
+legend('bottomright',legend=c('Moraines','Collected data'),pch=c(19,4),lwd=c(NA,2),col=c('blue','black'),bty="n")
+```
+
+### d) Taille des trajectoires
+
+Utile pour la suite
+
+```{r}
+N=length(mor1_0:morf_0) 
+```
+# 2bis - 
+```{r}
+plot(dMor_0[,1],dMor_0[,2],pch=19,cex=2,col='blue',xlab='Time (year)',ylab='Position (m)',lwd=2,ylim=c(-300,1400),xaxt='n')
+ticks <- seq(12, 193, by = 10)
+axis(1, at = ticks, labels = 2011 - ticks)
+
+
+couleurs <- c(
+  "#264653", # bleu pétrole
+  "#2A9D8F", # turquoise
+  "#8AB17D", # vert sauge
+  "#E9C46A", # jaune sable
+  "#F4A261", # orange doux
+  "#E76F51", # corail
+  "#D62828", # rouge profond
+  "#6A4C93", # violet
+  "#457B9D", # bleu acier
+  "#A8DADC"  # bleu pastel
+)
+n_test<-10
+temps<-simRecords(dMor_0,
+                  N=N,
+                  gaussConv = TRUE,
+                  sigmaGauss = 2,
+                  sd = 50)[,1]
+
+plot((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='p',pch=4,cex=0.5,xlab='Time (year)',ylab='Position (m)',lwd=2,col='white',ylim=c(-300,1400),xaxt='n')
+ticks <- seq(12, 193, by = 10)
+axis(1, at = ticks, labels = 2011 - ticks)
+for(i in 1:n_test){
+  sim<-simRecords(dMor_0,
+                           N=N,
+                           gaussConv = TRUE,
+                           sigmaGauss = runif(1,min=0,max=4),
+                           sd = runif(1,min=30,max=150))[,2]
+  lines(temps,sim,type='l',col=couleurs[i],lwd=2)
+}
+points(dMor_0[,1],dMor_0[,2],pch=19,cex=2,col='blue')
+```
+
+# 3 - Figure 2
+
+Envelops of trajectories for different values of $s$ and of $\sigma$. Subfigure a) : $s$ impact on trajectories with $\sigma$ fixed. Subfigure b) : $\sigma$ impact on trajectories with $s$ fixed. The blue line is the real \textit{Glacier des Bossons} trajectory. Blue dots are the observed moraines. Areas of different colors are the envelops (see equations \eqref{eq:quantile} and \eqref{eq:fct_dist}) of the trajectories simulated for different values of the studied parameter. When $s$ is fixed at 2.8, an increasing $\sigma$ causes the area covered by the trajectories to widen downwards.
+
+### a) Paramètres
+
+```{r}
+# paramètres à tester
+
+Ssmin<-c(0,1,5)
+Sdmin<-c(50,100,150,200)
+
+# Nombre de trajectoires à simuler
+n_s2<-1000
+
+# Couleurs à utiliser
+cols<-c('#756D00','#D1C300','#FFF12E','#FFF8A1')
+cols<-c('#756D00','#D1C300','#FFF12E')
+cols_s<-c('#500570','#8F09C8','#CB63F8','#E8BBFC')
+cols_s<-c('#500570','#CB63F8','#E8BBFC')
+```
+
+## b) Test de $\sigma$
+
+```{r}
+Ssm_fix<-0.57
+```
+
+### Simulations
+
+```{r}
+X_SD<-matrix(NA, nrow = n_s2*length(Sdmin), ncol = N) 
+k<-0
+for(Sdm in Sdmin){
+  #print(Sdm)
+  for (i in 1:n_s2) {
+    #print(i)
+    
+    traj_sim <- simRecords(dMor_0,
+                           N=N,
+                           gaussConv = TRUE,
+                           sigmaGauss = Ssm_fix,
+                           sd = Sdm)[,2]
+    
+    X_SD[i+k*n_s2, ] <- traj_sim
+    
+  }
+  k<-k+1
+}
+```
+
+### Axe du temps
+
+```{r}
+temps<-simRecords(dMor_0,
+                  N=N,
+                  gaussConv = TRUE,
+                  sigmaGauss = 2,
+                  sd = 50)[,1]
+
+```
+
+### Calcul des moyennes et des enveloppes
+
+```{r}
+moyenne_1 <- apply(X_SD[1:n_s2,], 2, mean)
+q5_1 <- apply(X_SD[1:n_s2,], 2, quantile, probs = 0.05)
+q95_1 <- apply(X_SD[1:n_s2,], 2, quantile, probs = 0.95)
+
+moyenne_2 <- apply(X_SD[(n_s2+1):(2*n_s2),], 2, mean)
+q5_2<- apply(X_SD[(n_s2+1):(2*n_s2),], 2, quantile, probs = 0.05)
+q95_2<- apply(X_SD[(n_s2+1):(2*n_s2),], 2, quantile, probs = 0.95)
+
+moyenne_3 <- apply(X_SD[(2*n_s2+1):(3*n_s2),], 2, mean)
+q5_3 <- apply(X_SD[(2*n_s2+1):(3*n_s2),], 2, quantile, probs = 0.05)
+q95_3 <- apply(X_SD[(2*n_s2+1):(3*n_s2),], 2, quantile, probs = 0.95)
+
+moyenne_4 <- apply(X_SD[(3*n_s2+1):(4*n_s2),], 2, mean)
+q5_4s <- apply(X_SD[(3*n_s2+1):(4*n_s2),], 2, quantile, probs = 0.05)
+q95_4 <- apply(X_SD[(3*n_s2+1):(4*n_s2),], 2, quantile, probs = 0.95)
+
+
+```
+
+### Plot
+```{r}
+
+
+croix<-c(27,36,38,41,44,59,100,141,146,150,155,158,160,165,171,175,177)
+croix_in<-(mor1_0:morf_0)[croix]
+croix_va<-(X_NA[mor1_0:morf_0])[croix]
+plot(croix_in,croix_va,pch=19,cex=2,col='red')
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='p',pch=4,lwd=1,col='blue')
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='l',pch=4,lwd=1,col='blue')
+
+```
+
+```{r}
+plot(temps,moyenne_4,type='l',col=cols[4],lwd=1,ylim=c(-500,max(q95_4)),xlab='Time (years)',ylab='Position (m)', xaxt = "n")
+ticks <- seq(12, 193, by = 10)
+axis(1, at = ticks, labels = 2011 - ticks)
+#polygon(c(temps, rev(temps)), c(q5_4s, rev(q95_4)),
+       # col = alpha(cols[3],0.5), border = NA)
+
+
+polygon(c(temps, rev(temps)), c(q5_3, rev(q95_3)),
+        col = alpha(cols[3],0.5), border = NA)
+
+
+polygon(c(temps, rev(temps)), c(q5_2, rev(q95_2)),
+        col = alpha(cols[2],0.5), border = NA)
+
+polygon(c(temps, rev(temps)), c(q5_1, rev(q95_1)),
+       col = alpha(cols[1],0.5), border = NA)
+
+
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='l',lwd=6,col='#A3CBFF')
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='l',lwd=1,col='blue')
+lines(croix_in,croix_va,pch=19,type='p',cex=1,col='#A3CBFF')
+lines(croix_in,croix_va,pch=4,type='p',cex=0.5,col='blue')
+points(dMor_0,pch=19,cex=2,col='blue')
+legend('bottomright',legend=c('Moraines','Real trajectory', c(expression(bold('Values of sigma : '))),'50','100','150'),col=c('blue','#A3CBFF',NA,alpha(cols,0.5)),lwd=c(NA,6,1,10,10,10),pch=c(19,NA,NA,NA,NA,NA),bty = "n")
+legend('bottomright',legend=c('Moraines','Real trajectory', c(expression(bold('Values of sigma : '))),'50','100','150'),col=c('blue','blue',NA,alpha(cols,0.5)),lwd=c(NA,1,1,10,10,10),pch=c(19,NA,NA,NA,NA,NA),bty = "n")
+#legend('bottomright',legend=c('Moraines','Real trajectory', c(expression(bold('Values of sigma : '))),'50','100','150','200'),col=c('blue','blue',NA,alpha(cols,0.5)),lwd=c(NA,1,1,10,10,10,10),pch=c(19,NA,NA,NA,NA,NA,NA),bty = "n")
+legend('topleft', legend='s = 0.57',bty = "n")
+
+```
+
+## c) Test de s
+
+Meme chose que pour $\sigma$
+
+```{r}
+Sd_fix<-66.43
+X_SSM<-matrix(NA, nrow = n_s2*length(Ssmin), ncol = N) 
+k<-0
+for(Ssm in Ssmin){
+  #print(Ssm)
+  for (i in 1:n_s2) {
+    #print(i)
+    
+    traj_sim <- simRecords(dMor_0,
+                           N=N,
+                           gaussConv = TRUE,
+                           sigmaGauss = Ssm,
+                           sd = Sd_fix)[,2]
+    
+    X_SSM[i+k*n_s2, ] <- traj_sim
+    
+  }
+k<-k+1
+}
+
+moyenne_1 <- apply(X_SSM[1:n_s2,], 2, mean)
+q5_1 <- apply(X_SSM[1:n_s2,], 2, quantile, probs = 0.05)
+q95_1 <- apply(X_SSM[1:n_s2,], 2, quantile, probs = 0.95)
+
+moyenne_2 <- apply(X_SSM[n_s2+1:(2*n_s2),], 2, mean)
+q5_2 <- apply(X_SSM[n_s2+1:(2*n_s2),], 2, quantile, probs = 0.05)
+q95_2 <- apply(X_SSM[n_s2+1:(2*n_s2),], 2, quantile, probs = 0.95)
+
+moyenne_3 <- apply(X_SSM[(2*n_s2+1):(3*n_s2),], 2, mean)
+q5_3 <- apply(X_SSM[(2*n_s2+1):(3*n_s2),], 2, quantile, probs = 0.05)
+q95_3 <- apply(X_SSM[(2*n_s2+1):(3*n_s2),], 2, quantile, probs = 0.95)
+
+#moyenne_5 <- apply(X_SSM[(4*n_s2+1):(5*n_s2),], 2, mean)
+#q5_5<- apply(X_SSM[(4*n_s2+1):(5*n_s2),], 2, quantile, probs = 0.05)
+#q95_5<- apply(X_SSM[(4*n_s2+1):(5*n_s2),], 2, quantile, probs = 0.95)
+
+#moyenne_7 <- apply(X_SSM[(6*n_s2+1):(7*n_s2),], 2, mean)
+#q5_7 <- apply(X_SSM[(6*n_s2+1):(7*n_s2),], 2, quantile, probs = 0.05)
+#q95_7 <- apply(X_SSM[(6*n_s2+1):(7*n_s2),], 2, quantile, probs = 0.95)
+
+plot(temps,moyenne_1,type='l',col=alpha(cols_s[3],0.3),lwd=1,ylim=c(-200,max(q95_1)),xlab='Time (years)',ylab='Position (m)',xaxt="n")
+ticks <- seq(12, 193, by = 10)
+axis(1, at = ticks, labels = 2011 - ticks)
+polygon(c(temps, rev(temps)), c(q5_1, rev(q95_1)),
+        col = alpha(cols_s[3],0.5), border = NA)
+polygon(c(temps, rev(temps)), c(q5_2, rev(q95_2)),
+        col = alpha(cols_s[2],0.5), border = NA)
+polygon(c(temps, rev(temps)), c(q5_3, rev(q95_3)),
+        col = alpha(cols_s[1],0.5), border = NA)
+
+
+
+
+#polygon(c(temps, rev(temps)), c(q5_7, rev(q95_7)),
+ #       col = alpha(cols_s[1],0.5), border = NA)
+
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='l',lwd=6,col='#A3CBFF')
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='l',lwd=1,col='blue')
+lines(croix_in,croix_va,pch=19,type='p',cex=1,col='#A3CBFF')
+lines(croix_in,croix_va,pch=4,type='p',cex=0.5,col='blue')
+points(dMor_0,pch=19,cex=2,col='blue')
+legend('bottomright',legend=c('Moraines','Real trajectory', c(expression(bold('Values of s : '))),'0','1','5'),col=c('blue','#A3CBFF',NA,alpha(rev(cols_s),0.5)),lwd=c(NA,6,6,10,10,10,10),pch=c(19,NA,NA,NA,NA,NA,NA),bty = "n")
+legend('bottomright',legend=c('Moraines','Real trajectory', c(expression(bold('Values of s : '))),'0','1','5'),col=c('blue','blue',NA,alpha(rev(cols_s),0.5)),lwd=c(NA,1,1,10,10,10,10),pch=c(19,NA,NA,NA,NA,NA,NA),bty = "n")
+legend('topleft', legend='Sigma = 66.43',bty = "n")
+
+
+```
+
+# 4 - Figure 12
+
+Result of the linear interpolation used to compute metrics of Figure\ref{fig:4metrics}. Computed with the \textit{na.approx} function of the R package \textit{zoo}.
+
+```{r, results='hide'}
+library(zoo)
+```
+
+### a) Interpolation linéaire
+
+```{r}
+ts_interp1 <- na.approx(X_NA[mor1_0:morf_0])
+plot((mor1_0:morf_0)-12,ts_interp1,type='l',col='red',lty=2,lwd=2,xlab='Time (year)',ylab='Position (m)')
+lines((mor1_0:morf_0)-12,X_NA[mor1_0:morf_0],lwd=2,col='black')
+legend('bottomright', legend=c('Real trajectory','Interpolation'),col=c(1,'red'),lty=c(1,2),lwd=2,bty = "n")
+```
+
+### b) Interpolation par splines
+
+```{r}
+ts_interp2 <- na.spline(X_NA[mor1_0:morf_0])
+plot((mor1_0:morf_0),ts_interp2,type='l',lty=2,col='blue',xlab='Time (year)',ylab='Position (m)')
+lines((mor1_0:morf_0),ts_interp1,type='l',col='red',lty=2)
+lines((mor1_0:morf_0),X_NA[mor1_0:morf_0],lwd=2,col='black')
+legend("bottomright",legend=c('Real trajectory','Linear interpolation','Splines interpolation'),col=c('black','red','blue'),lty=c(1,2,2),bty = "n",lwd=c(2,1,1))
+```
+
+# 5 - Figure 3
+
+Envelopes and averages of the trajectories between $(L_2,R_2)$ and $(L_3,R_3)$ for different values of $s$ and of $\sigma$. Subfigure a) : impact of $s$ on trajectories with $\sigma$ fixed. Subfigure b) : impact of $\sigma$ on trajectories with $s$ fixed. Areas of different colors are the envelopes (see equations \eqref{eq:quantile} and \eqref{eq:fct_dist}) of the trajectories simulated for different values of the studied parameter.
+
+## a) Figure pour s
+
+```{r}
+# paramètres fixes
+Sd<-1
+
+# paramètres à tester
+SigmaSmooth<-c(1,3,5,6,7)
+SigmaSmooth<-c(0,1,2)
+
+# records à utiliser
+rec_pos<-c(9,34)
+rec_val<-c(4.6,9.8)
+N=34-9+1
+dRec=cbind(rec_pos,rec_val)
+
+# Nombre de trajectoires
+n_graph<-1000
+```
+
+### Simulations
+
+```{r}
+cols_s<-c('#F6E7FE','#E8BBFC','#D68FFA','#CB63F8','#8F09C8','#500570')
+cols_s<-c('#E8BBFC','#CB63F8','#8F09C8')
+X_test_graph<-matrix(NA, nrow = n_graph*length(SigmaSmooth), ncol = N) 
+k<-0
+for(s in SigmaSmooth){
+  #print(s)
+  for(i in 1:n_graph){
+    sRec=simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = s ,sd=Sd)[,2]
+    X_test_graph[i+k*n_graph, ] <- sRec
+    
+  }
+  k<-k+1
+}
+
+
+temps<-simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = SigmaG,sigmaSmooth = s ,sd=Sd)[,1]
+```
+
+```{r}
+plot(dRec,col='blue',pch=19,cex=2,ylim=c(0,10),xlab="Time",ylab="Position")
+k<-0
+for(s in SigmaSmooth){
+  q5_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, quantile, probs = 0.05)
+  q95_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, quantile, probs = 0.95)
+  #print(max(abs(q95_1-q5_1))/1000)
+  #print(mean(abs(q95_1-q5_1))/1000)
+  k<-k+1
+  polygon(c(temps, rev(temps)), c(q5_1, rev(q95_1)),
+          col = alpha(cols_s[k],0.6), border = NA)
+}
+k<-0
+for(s in SigmaSmooth){
+  moyenne_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, mean)
+  k<-k+1
+  lines(temps,moyenne_1, col =alpha(1,0.1),lwd=4)
+  lines(temps,moyenne_1, col = cols_s[k],lwd=2)
+}
+points(dRec,col='blue',pch=19,cex=2,ylim=c(-1700,1000))
+#legend('bottomright',legend=c('Records', c(expression(bold('Values of s : '))),'1','3','5','6','7'),col=c('blue',NA,alpha(cols_s,0.6)),lwd=c(NA,6,10,10,10,10,10),pch=c(19,NA,NA,NA,NA,NA,NA),bty = "n")
+legend('bottomright',legend=c('Records', c(expression(bold('Values of s : '))),'0','1','2'),col=c('blue',NA,alpha(cols_s,0.6)),lwd=c(NA,6,10,10,10,10,10),pch=c(19,NA,NA,NA,NA,NA,NA),bty = "n")
+legend('topleft', legend='sigma = 1',bty = "n")
+
+```
+
+## b) Figure pour $\sigma$
+
+Même chose que pour s
+
+```{r}
+SigmaSmooth<-1
+Sd<-c(3,1,0.5)
+n_graph<-1000
+cols_s<-(c('#FAF88F','#F8F563','#FFF12E','#C8C509','#9C9907','#756D00'))
+cols_s<-(c('#FAF88F','#FFF12E','#C8C509','#756D00'))
+X_test_graph<-matrix(NA, nrow = n_graph*length(Sd), ncol = N) 
+k<-0
+for(s in Sd){
+  #print(s)
+  for(i in 1:n_graph){
+    sRec=simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = SigmaSmooth ,sd=s)[,2]
+    X_test_graph[i+k*n_graph, ] <- sRec
+    
+  }
+  k<-k+1
+}
+
+
+temps<-simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = SigmaG,sigmaSmooth = s ,sd=Sd)[,1]
+plot(dRec,col='blue',ylim=c(-12,10),pch=19,cex=2,xlab="Time",ylab="Position")
+k<-0
+for(s in Sd){
+  q5_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, quantile, probs = 0.05)
+  q95_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, quantile, probs = 0.95)
+  #print(max(abs(q95_1-q5_1))/1000)
+  #print(mean(abs(q95_1-q5_1))/1000)
+  k<-k+1
+  polygon(c(temps, rev(temps)), c(q5_1, rev(q95_1)),
+          col = alpha(cols_s[k+1],0.6), border = NA)
+}
+k<-0
+for(s in Sd){
+  moyenne_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, mean)
+  k<-k+1
+  lines(temps,moyenne_1, col =alpha(1,0.1),lwd=4)
+  lines(temps,moyenne_1, col = cols_s[k],lwd=2)
+}
+points(dRec,col='blue',pch=19,cex=2,ylim=c(-1700,1000))
+legend('bottomright',legend=c('Records', c(expression(bold('Values of sigma : '))),'0.5','1','3'),col=c('blue',NA,alpha(rev(cols_s),0.8)),lwd=c(NA,6,10,10,10,10,10),pch=c(19,NA,NA,NA,NA,NA,NA),bty = "n")
+legend('topleft', legend='s = 1',bty = "n")
+
+```
+
+# 6 - Figure 2
+
+Examples of trajectories between $(L_2,R_2)$ and $(L_3,R_3)$ for different values of $s$ and of $\sigma$. Subfigure a) : impact of $s$ on trajectories with $\sigma$ fixed. Subfigure b) : impact of $\sigma$ on trajectories with $s$ fixed. Each color corresponds to a value of the studied hyper parameter and for each of those values, one example of a simulated trajectory has been plotted.
+
+## a) Test de $\sigma$
+
+```{r}
+cols_s<-c('#F8F563','#C8C509','#756D00')
+Sd<-c(3,1,0.5)
+SigmaSmooth<-1
+plot(dRec,col='blue',pch=19,cex=2,ylim=c(-10,10),xlab="Time",ylab="Position")
+k<-0
+for(s in Sd){
+  sRec=simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = SigmaSmooth ,sd=s)[,2]
+  lines(temps,sRec,col=cols_s[k+1],lwd=3)
+  k<-k+1
+}
+points(dRec,col='blue',pch=19,cex=2,ylim=c(-2000,1000),xlab="Time",ylab="Position")
+legend('bottomright',legend=c('Records', c(expression(bold('Values of sigma : '))),'0.5','1','3'),col=c('blue',NA,alpha(rev(cols_s),0.8)),lwd=c(NA,6,10,10,10),pch=c(19,NA,NA,NA,NA),bty = "n")
+legend('topleft', legend='s = 1',bty = "n")
+
+```
+
+## b) Test de s
+
+```{r}
+
+cols_s<-c('#E8BBFC','#CB63F8','#8F09C8')
+SigmaSmooth<-c(0,1,2)
+Sd<-1
+plot(dRec,col='blue',pch=19,cex=2,ylim=c(0,10),xlab="Time",ylab="Position")
+k<-0
+for(sigma in SigmaSmooth){
+  sRec=simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = sigma ,sd=Sd)[,2]
+  lines(temps,sRec,col=cols_s[k+1],lwd=3)
+  k<-k+1
+}
+points(dRec,col='blue',pch=19,cex=2,ylim=c(-2000,1000),xlab="Time",ylab="Position")
+legend('bottomright',legend=c('Records', c(expression(bold('Values of s : '))),'0','1','2'),col=c('blue',NA,alpha(cols_s,0.8)),lwd=c(NA,6,10,10,10),pch=c(19,NA,NA,NA,NA),bty = "n")
+legend('topleft', legend='sigma = 1',bty = "n")
+```
+
+# 7 - Figure 4
+
+Examples, envelope and mean of simulations between the records of Figure \ref{intro}. Blue area is the envelope (see equations \eqref{eq:quantile} and \eqref{eq:fct_dist}). Blue dots are the records of the series $X_t$ which was presented in Figure \ref{intro} and plotted in black here. The thin blue lines are 10 examples of simulations made for $s=1.5$ and $\sigma=2$ and the thick blue curve is the mean of 10 000 simulations of trajectories with the same set of hyper parameters. The orange line is the best simulation according to the MSE (see Equation \ref{mse}).
+
+### a) Contexte
+
+```{r}
+pos<-c(0,2.3,3.6,3.3,1.8,3,2.7,3.6,3.7,4.6,3.9,3.85,3.75,2.8,2.2,2.25,3,2,2.5,1.7,2.45,2.5,1.6,1.65,1.55,2,2.45,3.1,2.8,3.2,3.8,3.1,5.3,5.45,7.6,9.8,9.4,10.2,10,9.4,7.8,4.5,4.6,5.5,5.4,3.8,3.7,3.5,2.5,1.2,0)
+times<-c(0:50)
+rec_max_bg2<-detect_records_maxima_norm(pos)[-1,]
+N<-36
+Sd<-c(1.7)
+n_graph<-10000
+dRec=cbind(rec_max_bg2$ind_max-1,rec_max_bg2$rec_max)
+temps<-simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = s ,sd=Sd)[,1]
+```
+
+### b) Simulations
+
+```{r}
+# Matrice à remplir
+X_test_graph<-matrix(NA, nrow = n_graph*length(Sd), ncol = N) 
+k<-0
+for(s in Sd){
+  print(s)
+  for(i in 1:n_graph){
+    sRec=simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss  = 0 ,sd=s)[,2]
+    X_test_graph[i+k*n_graph, ] <- sRec
+    
+  }
+  k<-k+1
+}
+
+```
+
+### c) Calcul des erreurs par rapport à la vraie trajectoire
+
+```{r}
+X_diff<-abs(X_test_graph-pos[3:38])
+
+mse <- function(a,b) mean((a-b)^2)
+
+err<- apply(X_test_graph, 1,function(x) mse(pos[3:38], x))
+w1<-which(err==min(err))
+```
+
+### d) Plot
+
+```{r}
+plot(dRec,col='blue',ylim=c(-5,10),xlim=c(0,50),pch=19,cex=2,xlab="Time",ylab="Position")
+k<-0
+for(s in Sd){
+  q5_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, quantile, probs = 0.05)
+  q95_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, quantile, probs = 0.95)
+  print(max(abs(q95_1-q5_1))/1000)
+  print(mean(abs(q95_1-q5_1))/1000)
+  k<-k+1
+  polygon(c(temps, rev(temps)), c(q5_1, rev(q95_1)),
+          col = alpha("#8ABDFF",0.6), border = NA)
+}
+k<-0
+for(s in Sd){
+  moyenne_1 <- apply(X_test_graph[(k*n_graph+1):((k+1)*n_graph),], 2, mean)
+  k<-k+1
+  lines(temps,moyenne_1, col =alpha(1,0.1),lwd=4)
+  lines(temps,moyenne_1, col = 'blue',lwd=2)
+}
+
+for(i in 1:5){
+  sRec=simRecords(dRec,N=N,gaussConv = TRUE,sigmaGauss = SigmaG,sigmaSmooth = SigmaSmooth ,sd=s)[,2]
+  lines(temps,sRec,col=alpha("blue",0.6))
+}
+lines(times,pos,type='b',pch=19,cex=0.5,lwd=2)
+segments(x0 = a, y0 = -10, x1 = a, y1 = b,lty=2,col='blue')
+segments(x0 = c, y0 = -10, x1 = c, y1 = d,lty=2,col='blue')
+segments(x0 = e, y0 = -10, x1 = e, y1 = f,lty=2,col='blue')
+segments(x0 = g, y0 = -10, x1 = g, y1 = h,lty=2,col='blue')
+lines(temps,X_test_graph[w1,],col='orange',lwd=2)  
+points(dRec,col='blue',pch=19,cex=2,ylim=c(-1700,1000))
+
+
+legend('bottomright',legend=c('Records','Simulations','Mean of simulations','Best simulation','Xt'),col=c('blue','blue','blue','orange',1),lwd=c(NA,1,2,2,2),pch=c(19,NA,NA,NA,19),bty = "n")
+
+
+
+```
+
+# 8 - Annexes : Figures hors article
+
+# a) Illustration point impossible
+
+```{r}
+N=length((mor1_0:morf_0))
+sim<-simRecords(dMor_0,
+                N=N,
+                gaussConv = TRUE,
+                sigmaGauss = SigmaG,
+                sigmaSmooth=2.8,
+                sd = 78.6)
+sim_bis<-sim[,2]
+mod<-40
+sim_bis[mod]<-1250
+sim_bis[length(sim[,1])]<-1330
+plot((mor1_0:morf_0),X_NA[mor1_0:morf_0],type='l',xlab='Time (year)',ylab='Position (m)',main='',lwd=2)
+lines(sim[,1],sim_bis,col='#6190E8',lwd=2)
+
+points(dMor_0,pch=19,cex=2,col='blue')
+points(sim[,1][mod],sim_bis[mod],pch=19,cex=2,col='orange')
+segments(
+  x0 = sim[,1][mod],
+  y0 = sim_bis[mod],
+  x1 = 200,   # fin du plot
+  y1 = sim_bis[mod],
+  col = "orange",
+  lty = 2,        # pointillé
+  lwd = 2
+)
+
+legend('bottomright',legend=c('Observed moraines','Impossible simulated point','Real trajectory','Simulated Trajectory'),pch=c(19,19,NA,NA),col=c('blue','orange','black','#6190E8'),lwd=c(NA,NA,2,2))
+
+
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
