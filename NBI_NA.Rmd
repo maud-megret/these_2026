@@ -300,7 +300,7 @@ history <- model_BM$fit(
   y = Y_train,
   epochs = 350L,
   batch_size = 32L,
-  verbose = 0,
+  verbose = 1,
   validation_split = 0.2,
   #callbacks = list(early_stop)
 )
@@ -507,10 +507,12 @@ grid.arrange(p1, p2, p3, p4, ncol=2)
 ```{r, eval=FALSE}
 # Paramètres prédits
 
-best_s<-0.57
-best_sigma<-66.43
+best_s<-best_Ssm
+best_sigma<-best_Sd
 ss_pb<-best_s
 sd_pb<-best_sigma
+ss_pb<-0.57
+sd_pb<-66.43
 n_test_pb<-10000
 
 # Matrice
@@ -532,8 +534,8 @@ for (i in 1:n_test_pb) {
 ```
 
 ```{r}
-#save(X_pb_NA_corr, file = "X_pb_NA_NBIVF_big_bossons_NA_corr.RData")
-data<-load(file = "X_pb_NA_NBIVF_big_bossons_NA_corr.RData")
+save(X_pb_NA_corr, file = "X_pb_NA_NBIVF_big_bossons_NA_corr_NN.RData")
+data<-load(file = "X_pb_NA_NBIVF_big_bossons_NA_corr_NN.RData")
 print(data)
 ```
 
@@ -559,6 +561,9 @@ print(aire_pb)
 aire_all<- sum((q95_all - q5_all)) * mean(diff(temps))
 print(aire_all)
 print(aire_pb/aire_all)
+#[1] 56876.14
+#[1] 90504.21
+#[1] 0.6284364
 ```
 
 
@@ -647,6 +652,152 @@ lines(croix_in,croix_va,pch=4,type='p',cex=1,col='black',lwd=2)
 points(dMor_0[,1],dMor_0[,2],pch=19,cex=2,col='blue')
 #legend("bottomleft",legend=c('Moraines','Real trajectory'),lty=c(NA,1),lwd=c(NA,3),col=c('blue',1),pch=c(19,NA),bty = "n")
 ```
+
+```{r}
+
+plot(temps,X_pb_NA_corr[w1,],col='orange',lwd=3,type='l',
+     xlab = "Time (year)", ylab = "Position (m)",ylim=c(min(q5_all),max(moyenne_pb)),xaxt="n")
+ticks <- seq(12, 193, by = 10)
+axis(1, at = ticks, labels = 2011 - ticks)
+lines(temps,X_pb_NA_corr[w1,],col='orange',lwd=2,type='l',
+     xlab = "Time (year)", ylab = "Position (m)",
+     main = "Brownian method with the best predicted parameters",ylim=c(min(q5_all),max(moyenne_pb)))
+
+#polygon(c(temps, rev(temps)), c(q5_pb, rev(q95_pb)),
+ #       col = alpha('orange',0.2), border = NA)
+#polygon(c(temps, rev(temps)), c(q5_all, rev(q95_all)),
+ #       col = alpha('blue',0.1), border = NA)
+
+
+legend(
+  "bottomright",
+  legend = c('Real trajectory','Best simulation'),
+  col = c(1, "orange"),
+  lwd = 3,
+  lty = 1,
+  bty = "n"
+)
+lines((mor1_0:morf_0),X_NA[(mor1_0:morf_0)],type='l',lwd=3)
+lines(croix_in,croix_va,pch=4,type='p',cex=1,col='black',lwd=2)
+points(dMor_0[,1],dMor_0[,2],pch=19,cex=1,col='blue')
+#legend("bottomleft",legend=c('Moraines','Real trajectory'),lty=c(NA,1),lwd=c(NA,3),col=c('blue',1),pch=c(19,NA),bty = "n")
+```
+
+### Densités
+```{r}
+# traj : matrice 1000 x n (lignes = trajectoires, colonnes = temps)
+n_traj <- nrow(X_pb_NA_corr)
+n_time <- ncol(X_pb_NA_corr)
+
+# Définir les bins de valeurs
+n_bins <- 100
+val_range <- range(X_pb_NA_corr)
+breaks <- seq(val_range[1], val_range[2], length.out = n_bins + 1)
+bin_centers <- (breaks[-1] + breaks[-length(breaks)]) / 2
+
+# Matrice densité : n_bins x n_time
+dens_mat <- matrix(0, nrow = n_bins, ncol = n_time)
+
+for (t in 1:n_time) {
+  h2 <- hist(X_pb_NA_corr[, t], breaks = breaks, plot = FALSE)
+  dens_mat[, t] <- h2$counts / n_traj  # normalisation -> densité relative
+}
+
+
+```
+```{r}
+library(ggplot2)
+library(reshape2)
+
+df <- melt(dens_mat)
+colnames(df) <- c("bin", "time", "density")
+df$value <- bin_centers[df$bin]
+df$density[df$density == 0] <- NA
+
+# On regarde la distribution des densités non-nulles pour choisir un seuil
+quantile(df$density, probs = c(0.5, 0.9, 0.95, 0.99), na.rm = TRUE)
+
+cap <- quantile(df$density, 0.95, na.rm = TRUE)  # à ajuster selon ce que tu vois
+
+ggplot(df, aes(x = time, y = value, fill = density)) +
+  geom_raster() +
+  scale_fill_distiller(
+    palette = "RdYlBu", 
+    trans = "sqrt",
+    limits = c(0, cap),
+    oob = scales::squish,   # <- clé : écrase (au lieu de mettre NA) tout ce qui dépasse cap
+    na.value = "white"
+  ) +
+  geom_line(data = data.frame(time = 1:n_time, mean = colMeans(X_pb_NA_corr)),
+            aes(x = time, y = mean), inherit.aes = FALSE, color = "red") +
+    geom_line(data = data.frame(xx=(mor1_0:morf_0)-mor1_0,yy=X_NA[(mor1_0:morf_0)]),
+            aes(x = xx, y = yy), inherit.aes = FALSE, color = "black",size=0.8) +
+      geom_point(data = data.frame(xx=(croix_in)-mor1_0,yy=croix_va),
+            aes(x = xx, y = yy), inherit.aes = FALSE, color = "black",shape=4,size=2) +
+        geom_point(data = data.frame(dMor_0[,1],dMor_0[,2]),
+            aes(x = dMor_0[,1]-mor1_0,y=dMor_0[,2]), inherit.aes = FALSE, color = "blue",size=2) +
+  theme_minimal() +
+  labs(x="Time (years)",y="Position (m)",fill = "Density")
+
+```
+```{r}
+# traj : matrice 1000 x n (lignes = trajectoires, colonnes = temps)
+n_traj <- nrow(X_bm_NA_corr)
+n_time <- ncol(X_bm_NA_corr)
+
+# Définir les bins de valeurs
+n_bins <- 100
+val_range <- range(X_bm_NA_corr)
+breaks <- seq(val_range[1], val_range[2], length.out = n_bins + 1)
+bin_centers <- (breaks[-1] + breaks[-length(breaks)]) / 2
+
+# Matrice densité : n_bins x n_time
+dens_mat <- matrix(0, nrow = n_bins, ncol = n_time)
+
+for (t in 1:n_time) {
+  h2 <- hist(X_bm_NA_corr[, t], breaks = breaks, plot = FALSE)
+  dens_mat[, t] <- h2$counts / n_traj  # normalisation -> densité relative
+}
+
+
+```
+```{r}
+
+df <- melt(dens_mat)
+colnames(df) <- c("bin", "time", "density")
+df$value <- bin_centers[df$bin]
+df$density[df$density == 0] <- NA
+
+# On regarde la distribution des densités non-nulles pour choisir un seuil
+quantile(df$density, probs = c(0.5, 0.9, 0.95, 0.99), na.rm = TRUE)
+
+cap <- quantile(df$density, 0.95, na.rm = TRUE)  # à ajuster selon ce que tu vois
+
+ggplot(df, aes(x = time, y = value, fill = density)) +
+  geom_raster() +
+  scale_fill_distiller(
+    palette = "RdYlBu", 
+    trans = "sqrt",
+    limits = c(0, cap),
+    oob = scales::squish,   # <- clé : écrase (au lieu de mettre NA) tout ce qui dépasse cap
+    na.value = "white"
+  ) +
+  geom_line(data = data.frame(time = 1:n_time, mean = colMeans(X_bm_NA_corr)),
+            aes(x = time, y = mean), inherit.aes = FALSE, color = "red") +
+    geom_line(data = data.frame(xx=(mor1_0:morf_0)-mor1_0,yy=X_NA[(mor1_0:morf_0)]),
+            aes(x = xx, y = yy), inherit.aes = FALSE, color = "black",size=0.8) +
+      geom_point(data = data.frame(xx=(croix_in)-mor1_0,yy=croix_va),
+            aes(x = xx, y = yy), inherit.aes = FALSE, color = "black",shape=4,size=2) +
+        geom_point(data = data.frame(dMor_0[,1],dMor_0[,2]),
+            aes(x = dMor_0[,1]-mor1_0,y=dMor_0[,2]), inherit.aes = FALSE, color = "blue",size=2) +
+  theme_minimal() +
+  labs(x="Time (years)",y="Position (m)",fill = "Density")
+
+```
+
+```{r}
+```
+
 ```{r}
 
 plot(temps,X_pb_NA_corr[w1,],col='orange',lwd=3,type='l',
@@ -1087,4 +1238,30 @@ library(gridExtra)
 
 grid.arrange(MSE,MAPE,V,AUC, ncol = 2)
 ```
+```{r}
+library(pracma)
+# juste calculer le volume moyen sur un petit nombre de trajs
+N_test <- 1000
+SigmaS_v <-ss_pb
+Sd_v <-sd_pb
 
+
+aire_mean<- t(sapply(1:N_test, function(i) {
+  traj <- simRecords(dMor_0,
+                         N=N,
+                         gaussConv = TRUE,
+                         sigmaGauss = SigmaS_v,
+                         sd = Sd_v)[,2]
+  c(trap=trapz(traj),mse=mse(traj,ts_interp1),mape=MAPE(traj,ts_interp1))
+  
+}))
+
+mean(aire_mean[,1])
+mean(aire_mean[,2])
+mean(aire_mean[,3])
+
+```
+```{r}
+trap_rand <-apply(X_bm_NA_corr[,w], 1,function(x) trapz((X_NA[mor1_0:morf_0])[w]))
+mean(trap_rand)
+```
